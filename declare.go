@@ -10,8 +10,8 @@ func (c DefaultConsumer) declare() error {
 		return fmt.Errorf("error set qos: %v", err)
 	}
 
-	exchange := getExchangeName(c.queue, -1)
-	queue := getQueueName(c.queue, -1, nil)
+	exchange := getExchangeName(c.name, -1)
+	queue := getQueueName(c.name, -1, nil)
 
 	c.log.Infof("declare exchange: %s", exchange)
 	if err := c.amqpCh.ExchangeDeclare(
@@ -25,7 +25,7 @@ func (c DefaultConsumer) declare() error {
 		return err
 	}
 
-	c.log.Infof("declare queue: %s", queue)
+	c.log.Infof("declare name: %s", queue)
 	if _, err := c.amqpCh.QueueDeclare(
 		queue,
 		true,
@@ -45,7 +45,7 @@ func (c DefaultConsumer) declare() error {
 
 	if len(c.retryIntervals) > 0 {
 
-		exchangeRetry := getExchangeName(c.queue, 0)
+		exchangeRetry := getExchangeName(c.name, 0)
 
 		c.log.Infof("declare excahnge: %s", exchangeRetry)
 		if err := c.amqpCh.ExchangeDeclare(
@@ -60,9 +60,9 @@ func (c DefaultConsumer) declare() error {
 		}
 
 		for retry, interval := range c.retryIntervals {
-			queueRetry := getQueueName(c.queue, retry, c.retryIntervals)
+			queueRetry := getQueueName(c.name, retry, c.retryIntervals)
 
-			c.log.Infof("declare queue: %s", queueRetry)
+			c.log.Infof("declare name: %s", queueRetry)
 			if _, err := c.amqpCh.QueueDeclare(
 				queueRetry,
 				true,

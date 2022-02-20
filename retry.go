@@ -3,7 +3,7 @@ package goqueue
 type Retry int
 
 const (
-	RetryNext = iota
+	RetryNext = iota - 3
 	RetryStop
 	RetryIgnore
 )

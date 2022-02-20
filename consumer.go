@@ -11,14 +11,14 @@ type Consumer interface {
 	Consume() error
 }
 
-func NewConsumer(queue string, retryIntervals []time.Duration, callback Callback, amqpConn *amqp.Connection, consumerLog *log.Entry) Consumer {
+func NewConsumer(name string, retryIntervals []time.Duration, callback Callback, amqpConn *amqp.Connection, consumerLog *log.Entry) Consumer {
 	if consumerLog == nil {
 		consumerLog = log.WithFields(log.Fields{"_default": true})
 	}
-	consumerLog = consumerLog.WithFields(log.Fields{"queue": queue})
+	consumerLog = consumerLog.WithFields(log.Fields{"consumerName": name})
 
 	return &DefaultConsumer{
-		queue:          queue,
+		name:           name,
 		retryIntervals: retryIntervals,
 		callback:       callback,
 		amqpConn:       amqpConn,
@@ -27,7 +27,7 @@ func NewConsumer(queue string, retryIntervals []time.Duration, callback Callback
 }
 
 type DefaultConsumer struct {
-	queue          string
+	name           string
 	retryIntervals []time.Duration
 	callback       Callback
 	amqpConn       *amqp.Connection
@@ -56,7 +56,7 @@ func (c DefaultConsumer) Consume() error {
 	}
 
 	// Create co channel for consume deliveries
-	deliveries, err := c.amqpCh.Consume(c.queue, "", false, false, false, false, nil)
+	deliveries, err := c.amqpCh.Consume(getQueueName(c.name, -1, c.retryIntervals), c.name, false, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("error create consume channel: %v", err)
 	}
@@ -97,13 +97,13 @@ func (c DefaultConsumer) ProcessDelivery(delivery amqp.Delivery, deliveryLog *lo
 		deliveryLog.Warnf("callback error: %v", err)
 		switch retryStatus {
 		case RetryNext:
-			queueRetry := getQueueName(c.queue, retry, c.retryIntervals)
+			queueRetry := getQueueName(c.name, retry, c.retryIntervals)
 			if len(queueRetry) == 0 {
 				deliveryLog.Infof("retry finish")
 				return
 			}
 
-			deliveryLog.Infof("retry next")
+			deliveryLog.WithFields(log.Fields{"queueRetry": queueRetry}).Infof("retry next")
 
 			headers := delivery.Headers
 			if headers == nil {
@@ -111,7 +111,12 @@ func (c DefaultConsumer) ProcessDelivery(delivery amqp.Delivery, deliveryLog *lo
 			}
 			headers[RetryHeader] = retry + 1
 
-			if err := Publish(c.amqpCh, queueRetry, delivery.Body, headers); err != nil {
+			if err := c.amqpCh.Publish(getExchangeName(c.name, retry), queueRetry, false, false, amqp.Publishing{
+				ContentType:  "application/json",
+				DeliveryMode: amqp.Persistent,
+				Body:         delivery.Body,
+				Headers:      headers,
+			}); err != nil {
 				deliveryLog.Errorf("error retry: %v", err)
 			}
 		case RetryStop:

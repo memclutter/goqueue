@@ -27,22 +27,22 @@ func getRetry(headers amqp.Table) int {
 	}
 }
 
-func getExchangeName(queue string, retry int) string {
+func getExchangeName(consumerName string, retry int) string {
 	if retry == -1 {
-		return queue
+		return consumerName
 	}
 
-	return fmt.Sprintf("%s__retry", queue)
+	return fmt.Sprintf("%s__retry", consumerName)
 }
 
-func getQueueName(queue string, retry int, intervals []time.Duration) string {
+func getQueueName(consumerName string, retry int, intervals []time.Duration) string {
 	if retry == -1 {
-		return queue
+		return consumerName
 	}
 
 	if retry > len(intervals)-1 {
 		return ""
 	}
 
-	return fmt.Sprintf("%s__retry__%ds", queue, int(intervals[retry].Seconds()))
+	return fmt.Sprintf("%s__retry__%ds", consumerName, int(intervals[retry].Seconds()))
 }

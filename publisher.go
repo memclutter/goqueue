@@ -7,10 +7,10 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func Publish(amqpCh *amqp.Channel, queue string, data interface{}, headers amqp.Table) error {
+func Publish(amqpCh *amqp.Channel, consumerName string, data interface{}) error {
 	var err error
 
-	exchange := getExchangeName(queue, -1)
+	exchange := getExchangeName(consumerName, -1)
 
 	body, ok := data.([]byte)
 	if !ok {
@@ -20,11 +20,10 @@ func Publish(amqpCh *amqp.Channel, queue string, data interface{}, headers amqp.
 		}
 	}
 
-	if err := amqpCh.Publish(exchange, queue, false, false, amqp.Publishing{
+	if err := amqpCh.Publish(exchange, consumerName, false, false, amqp.Publishing{
 		ContentType:  "application/json",
 		DeliveryMode: amqp.Persistent,
 		Body:         body,
-		Headers:      headers,
 	}); err != nil {
 		return fmt.Errorf("error publish to amqp: %v", err)
 	}

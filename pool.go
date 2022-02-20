@@ -23,7 +23,7 @@ func NewPool(queue string, workers int, retryIntervals []time.Duration, callback
 		callback:       callback,
 		amqpConn:       amqpConn,
 		log: log.WithFields(log.Fields{
-			"queue": queue,
+			"name": queue,
 		}),
 	}
 }
