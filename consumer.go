@@ -97,8 +97,18 @@ func (c DefaultConsumer) ProcessDelivery(delivery amqp.Delivery, deliveryLog *lo
 		deliveryLog.Warnf("callback error: %v", err)
 		switch retryStatus {
 		case RetryNext:
+			queueRetry := getQueueName(c.queue, retry, c.retryIntervals)
+			if len(queueRetry) == 0 {
+				deliveryLog.Infof("retry finish")
+				return
+			}
+
 			deliveryLog.Infof("retry next")
-			if err := Publish(c.amqpCh, c.queue, delivery.Body, retry); err != nil {
+
+			headers := delivery.Headers
+			headers[RetryHeader] = retry + 1
+
+			if err := Publish(c.amqpCh, queueRetry, delivery.Body, headers); err != nil {
 				deliveryLog.Errorf("error retry: %v", err)
 			}
 		case RetryStop:

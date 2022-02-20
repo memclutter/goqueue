@@ -7,7 +7,7 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func Publish(amqpCh *amqp.Channel, queue string, data interface{}, retry int) error {
+func Publish(amqpCh *amqp.Channel, queue string, data interface{}, headers amqp.Table) error {
 	var err error
 
 	exchange := getExchangeName(queue, -1)
@@ -24,9 +24,7 @@ func Publish(amqpCh *amqp.Channel, queue string, data interface{}, retry int) er
 		ContentType:  "application/json",
 		DeliveryMode: amqp.Persistent,
 		Body:         body,
-		Headers: amqp.Table{
-			RetryHeader: retry + 1,
-		},
+		Headers:      headers,
 	}); err != nil {
 		return fmt.Errorf("error publish to amqp: %v", err)
 	}
