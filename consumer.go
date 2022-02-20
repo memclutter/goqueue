@@ -106,6 +106,9 @@ func (c DefaultConsumer) ProcessDelivery(delivery amqp.Delivery, deliveryLog *lo
 			deliveryLog.Infof("retry next")
 
 			headers := delivery.Headers
+			if headers == nil {
+				headers = amqp.Table{}
+			}
 			headers[RetryHeader] = retry + 1
 
 			if err := Publish(c.amqpCh, queueRetry, delivery.Body, headers); err != nil {
